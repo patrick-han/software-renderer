@@ -25,10 +25,11 @@ public:
 };
 
 
-void PutPixel(SDL_Renderer* renderer, int x, int y) {
+void PutPixel(SDL_Renderer* renderer, int x, int y, Color color) {
     // Origin at the center conversion
     int S_x = C_w / 2 + x;
     int S_y = C_h / 2 - y;
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
     SDL_RenderDrawPoint(renderer, S_x, S_y);
 }
 
@@ -55,7 +56,7 @@ std::vector<float> Interpolate(int i0, int d0, int i1, int d1) {
 }
 
 
-void DrawLine(SDL_Renderer* renderer, Point p0, Point p1) {
+void DrawLine(SDL_Renderer* renderer, Point p0, Point p1, Color color) {
 
     // Is the line more horizontal (greater difference in x values) or vertical?
     int dx = p1.x - p0.x;
@@ -68,7 +69,7 @@ void DrawLine(SDL_Renderer* renderer, Point p0, Point p1) {
         }
         std::vector<float> vy = Interpolate(p0.x, p0.y, p1.x, p1.y);
         for (int x = p0.x; x <= p1.x; x++) {
-            PutPixel(renderer, x, vy[x - p0.x]);
+            PutPixel(renderer, x, vy[x - p0.x], color);
         }
 
     }
@@ -80,12 +81,17 @@ void DrawLine(SDL_Renderer* renderer, Point p0, Point p1) {
         }
         std::vector<float> vx = Interpolate(p0.y, p0.x, p1.y, p1.x);
         for (int y = p0.y; y <= p1.y; y++) {
-            PutPixel(renderer, vx[y - p0.y], y);
+            PutPixel(renderer, vx[y - p0.y], y, color);
 
         }
     }
 }
 
+void DrawWireframeTriangle(SDL_Renderer* renderer, Point p0, Point p1, Point p2, Color color) {
+    DrawLine(renderer, p0, p1, color);
+    DrawLine(renderer, p1, p2, color);
+    DrawLine(renderer, p2, p0, color);
+}
 
 
 int main(int argc, char* argv[]) {
@@ -101,15 +107,15 @@ int main(int argc, char* argv[]) {
     // Render
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 
-    
+    Color color = { 0, 255, 0 };
     Point p0 = Point(-50, -200);
     Point p1 = Point(60, 240);
     Point p2 = Point(100, -10);
-    
-    DrawLine(renderer, p0, p1);
-    DrawLine(renderer, p1, p2);
-    DrawLine(renderer, p2, p0);
-    
+   
+    DrawWireframeTriangle(renderer, p0, p1, p2, color);
+
+
+
     SDL_RenderPresent(renderer);
     while (1) {
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
