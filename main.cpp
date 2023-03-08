@@ -3,6 +3,8 @@
 #include <cmath>
 #include <SDL.h>
 #include <vector>
+#include <ranges>
+#include <iostream>
 
 #define C_w 1920/2
 #define C_h 1080/2
@@ -93,6 +95,44 @@ void DrawWireframeTriangle(SDL_Renderer* renderer, Point p0, Point p1, Point p2,
     DrawLine(renderer, p2, p0, color);
 }
 
+void DrawFilledTriangle(SDL_Renderer* renderer, Point p0, Point p1, Point p2, Color color) {
+    // First sort our vertcies by y-value ascending p0.y, p1.y, p2.y
+    if (p1.y < p0.y) { std::swap(p1, p0); }
+    if (p2.y < p0.y) { std::swap(p2, p0); }
+    if (p2.y < p1.y) { std::swap(p2, p1); }
+
+    // We use our interpolate function to get all the x values for each y-value for each of the three sides
+    auto x01 = Interpolate(p0.y, p0.x, p1.y, p1.x);
+    auto x12 = Interpolate(p1.y, p1.x, p2.y, p2.x);
+    auto x02 = Interpolate(p0.y, p0.x, p2.y, p2.x); // p0 to p2 is the "tall side", the other 2 make up the "short" side
+
+    // There's a repeated value in x01 and x12
+    x01.pop_back();
+    std::ranges::copy(x12, std::back_inserter(x01));
+    auto x012 = x01;
+
+    // Determine which side(s) are left and which is right
+    std::vector<float> x_left;
+    std::vector<float> x_right;
+    int middle = std::floor(x02.size() / 2); // This is arbitrary, we could compare any value
+    if (x02[middle] < x012[middle]) {
+        x_left = x02;
+        x_right = x012;
+    }
+    else {
+        x_left = x012;
+        x_right = x02;
+    }
+
+    // Draw horizontal lines
+    for (int y = p0.y; y <= p2.y; y++) {
+        for (int x = x_left[y - p0.y]; x <= x_right[y - p0.y]; x++) {
+            PutPixel(renderer, x, y, color);
+        }
+    }
+
+}
+
 
 int main(int argc, char* argv[]) {
     SDL_Event event;
@@ -102,19 +142,22 @@ int main(int argc, char* argv[]) {
 
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(C_w, C_h, 0, &window, &renderer);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
     // Render
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 
-    Color color = { 0, 255, 0 };
-    Point p0 = Point(-50, -200);
-    Point p1 = Point(60, 240);
-    Point p2 = Point(100, -10);
+    
+    Point p0 = Point(-200, -250);
+    Point p1 = Point(200, 50);
+    Point p2 = Point(20, 250);
    
-    DrawWireframeTriangle(renderer, p0, p1, p2, color);
+    Color color = { 0, 255, 0 };
+    DrawFilledTriangle(renderer, p0, p1, p2, color);
+    Color color2 = { 0, 0, 0 };
+    DrawWireframeTriangle(renderer, p0, p1, p2, color2);
 
-
+    
 
     SDL_RenderPresent(renderer);
     while (1) {
